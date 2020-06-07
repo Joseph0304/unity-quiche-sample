@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ using Quiche;
 
 public class QuicBehaviourScript : MonoBehaviour
 {
-
+    private const ulong HTTP_REQ_STREAM_ID = 4;
     private UdpClient client = null;
     private QuicheClient quiche = null;
 
@@ -19,6 +20,11 @@ public class QuicBehaviourScript : MonoBehaviour
     private IAsyncResult receiveResult = null;
 
     private byte[] buf;
+
+    private Uri uri;
+    private bool req_sent = false;
+
+    private byte[] streamRecv = new byte[65535];
 
     // Start is called before the first frame update
     void Start()
@@ -53,7 +59,7 @@ public class QuicBehaviourScript : MonoBehaviour
 
     private void Connect(string url)
     {
-        var uri = new Uri(url);
+        uri = new Uri(url);
         var host = uri.Host;
         var port = uri.Port;
         client.Connect($"{host}", port);
@@ -98,8 +104,46 @@ public class QuicBehaviourScript : MonoBehaviour
         }
         if(quiche.IsEstablished)
         {
-            // TODO
-            return;
+            if(!req_sent)
+            {
+                Debug.Log($"sending HTTP request for {uri.PathAndQuery}");
+                var req = Encoding.ASCII.GetBytes($"GET {uri.PathAndQuery}\r\n");
+                var streamWrite = quiche.StreamSend(HTTP_REQ_STREAM_ID, req, true);
+                if(streamWrite < 0)
+                {
+                    QuicheError err = (QuicheError)Enum
+                        .ToObject(typeof(QuicheError), streamWrite);
+                    Debug.LogError($"send failed {err}");
+                    throw new Exception();
+                }
+                req_sent = true;
+            }
+
+            foreach(ulong streamId in quiche.Readable())
+            {
+                bool fin = false;
+                var readStream = quiche.StreamReceive(
+                    streamId, streamRecv, ref fin);
+                if(readStream < 0)
+                {
+                    continue;
+                }
+                var res = Encoding.ASCII.GetString(
+                    streamRecv.Take(readStream).ToArray());
+                Debug.Log($"{res}");
+                if(fin)
+                {
+                    var reason = Encoding.ASCII.GetBytes("kthxbye");
+                    int closeError = quiche.Close(reason);
+                    if(closeError < 0)
+                    {
+                        QuicheError err = (QuicheError)Enum
+                            .ToObject(typeof(QuicheError), closeError);
+                        Debug.LogError($"send failed {err}");
+                        throw new Exception();
+                    }
+                }
+            }
         }
         var write = quiche.Send(buf);
         if(write == (int)QuicheError.QUICHE_ERR_DONE)

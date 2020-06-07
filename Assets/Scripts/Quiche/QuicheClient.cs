@@ -90,6 +90,11 @@ namespace Quiche
                 serverName, scid, Config);
         }
 
+        public int Close(byte[] reason)
+        {
+            return Connection.Close(true, 0, reason);
+        }
+
         public int Receive(byte[] buf)
         {
             return Connection.Receive(buf);
@@ -98,6 +103,21 @@ namespace Quiche
         public int Send(byte[] buf)
         {
             return Connection.Send(buf);
+        }
+
+        public int StreamReceive(ulong streamId, byte[] _out, ref bool fin)
+        {
+            return Connection.StreamReceive(streamId, _out, ref fin);
+        }
+
+        public int StreamSend(ulong streamId, byte[] buf, bool fin)
+        {
+            return Connection.StreamSend(streamId, buf, fin);
+        }
+
+        public QuicheStreamIterator Readable()
+        {
+            return Connection.Readable();
         }
 
         public string HexDump
