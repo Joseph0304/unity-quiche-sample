@@ -3,6 +3,10 @@ using System.Runtime.InteropServices;
 
 namespace Quiche
 {
+    public enum Shutdown {
+        QUICHE_SHUTDOWN_READ = 0,
+        QUICHE_SHUTDOWN_WRITE = 1,
+    };
     public class QuicheConnection : IDisposable
     {
         private static class NativeMethods
@@ -67,7 +71,7 @@ namespace Quiche
             internal static extern int quiche_conn_stream_shutdown(
                 IntPtr conn,
                 ulong stream_id,
-                IntPtr /* Shutdown */ direction,
+                int /* Shutdown */ direction,
                 ulong err);
 
             [DllImport("libquiche")]
@@ -128,14 +132,6 @@ namespace Quiche
             internal static extern bool quiche_conn_is_closed(IntPtr conn);
 
             [DllImport("libquiche")]
-            internal static extern bool quiche_stream_iter_next(
-                IntPtr iter,
-                IntPtr /* *mut u64 */ stream_id);
-
-            [DllImport("libquiche")]
-            internal static extern void quiche_stream_iter_free(IntPtr iter);
-
-            [DllImport("libquiche")]
             internal static extern void quiche_conn_stats(
                 IntPtr conn,
                 IntPtr /* &mut Stats */ _out);
@@ -167,7 +163,7 @@ namespace Quiche
             byte[] ssl,
             bool isServer)
         {
-            var ptr = Marshal.AllocHGlobal(ssl.Length);
+            var ptr = Marshal.AllocCoTaskMem(ssl.Length);
             Marshal.Copy(ssl, 0, ptr, ssl.Length);
             var conn = NativeMethods.quiche_conn_new_with_tls(
                 scid, (ulong)scid.Length,
@@ -175,7 +171,7 @@ namespace Quiche
                 config.Config,
                 ptr,
                 isServer);
-            Marshal.FreeHGlobal(ptr);
+            Marshal.FreeCoTaskMem(ptr);
             return new QuicheConnection(conn);
         }
 
@@ -226,10 +222,62 @@ namespace Quiche
             return (int)NativeMethods.quiche_conn_send(Connection, buf, (ulong)buf.Length);
         }
 
-        public long StreamReceive(ulong streamId, byte[] _out, ref bool fin)
+        public int StreamReceive(ulong streamId, byte[] _out, ref bool fin)
         {
-            return NativeMethods.quiche_conn_stream_recv(
+            return (int)NativeMethods.quiche_conn_stream_recv(
                 Connection, streamId, _out, (ulong)_out.Length, ref fin);
+        }
+
+        public int StreamSend(ulong streamId, byte[] buf, bool fin)
+        {
+            return (int)NativeMethods.quiche_conn_stream_send(
+                Connection, streamId, buf, (ulong)buf.Length, fin);
+        }
+
+        public int StreamShutdown(ulong streamId, Shutdown direction, ulong err)
+        {
+            return NativeMethods.quiche_conn_stream_shutdown(
+                Connection, streamId, (int)direction, err);
+        }
+
+        public long StreamCapacity(ulong streamId)
+        {
+            return NativeMethods.quiche_conn_stream_capacity(
+                Connection, streamId);
+        }
+
+        public bool StreamFinished(ulong streamId)
+        {
+            return NativeMethods.quiche_conn_stream_finished(
+                Connection, streamId);
+        }
+
+        public QuicheStreamIterator Readable()
+        {
+            return new QuicheStreamIterator(
+                NativeMethods.quiche_conn_readable(Connection));
+        }
+
+        public QuicheStreamIterator Writable()
+        {
+            return new QuicheStreamIterator(
+                NativeMethods.quiche_conn_writable(Connection));
+        }
+
+        public int StreamInitApplicationData(ulong streamId, byte[] data)
+        {
+            var ptr = Marshal.AllocCoTaskMem(data.Length);
+            Marshal.Copy(data, 0, ptr, data.Length);
+            var err = NativeMethods.quiche_conn_stream_init_application_data(
+               Connection, streamId, ptr);
+            Marshal.FreeCoTaskMem(ptr);
+            return err;
+        }
+
+        public IntPtr StreamApplicationData(ulong streamId)
+        {
+            return NativeMethods.quiche_conn_stream_application_data(
+                Connection, streamId);
         }
 
         public int Close(bool app, ulong err, byte[] reason)
