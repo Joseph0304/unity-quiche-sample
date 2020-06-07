@@ -3,13 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using UnityEngine;
+
+using Quiche;
 
 public class QuicBehaviourScript : MonoBehaviour
 {
 
     private UdpClient client = null;
-    private Quiche quiche = null;
+    private QuicheClient quiche = null;
 
     private IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
@@ -20,12 +23,25 @@ public class QuicBehaviourScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Debug.Log(Quiche.GetVersion());
-        Quiche.DebugLog((line, argp) => {
+        Debug.Log(QuicheClient.GetVersion());
+        QuicheClient.DebugLog((line, argp) => {
             Debug.Log(line);
         });
         client = new UdpClient();
-        quiche = new Quiche();
+
+        var config = new Config(0xbabababa);
+        byte[] protos = Encoding.ASCII.GetBytes("\x05hq-24\x05hq-23\x08http/0.9");
+        config.SetApplicationProtos(protos);
+        config.SetIdleTimeout(5000);
+        config.SetMaxPacketSize(QuicheClient.MAX_DATAGRAM_SIZE);
+        config.SetInitialMaxData(10000000);
+        config.SetInitialMaxStreamDataBidiLocal(1000000);
+        config.SetInitialMaxStreamDataUni(1000000);
+        config.SetInitialMaxStreamsBidi(100);
+        config.SetInitialMaxStreamsUni(100);
+        config.SetDisableActiveMigration(true);
+        config.VerifyPeer(false);
+        quiche = new QuicheClient(config);
         Connect("https://127.0.0.1:4433/index.html");
     }
 
@@ -46,7 +62,7 @@ public class QuicBehaviourScript : MonoBehaviour
             $"connecting to {uri.Authority} from {client.Client.LocalEndPoint} "
             + $"with scid {quiche.HexDump}");
         // initial send
-        buf = new byte[Quiche.MAX_DATAGRAM_SIZE];
+        buf = new byte[QuicheClient.MAX_DATAGRAM_SIZE];
         int write = quiche.Send(buf);
         client.Send(buf, write);
     }
