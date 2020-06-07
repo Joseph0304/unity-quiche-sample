@@ -52,10 +52,6 @@ namespace Quiche
         };
         private static class NativeMethods
         {
-            /* version */
-            [DllImport("libquiche")]
-            internal static extern IntPtr quiche_version();
-
             /* debug logging */
             [DllImport("libquiche")]
             internal static extern int quiche_enable_debug_logging(
@@ -239,14 +235,6 @@ namespace Quiche
 
             [DllImport("libquiche")]
             internal static extern void quiche_conn_free(IntPtr conn);
-        }
-
-        public static string GetVersion()
-        {
-            // quiche_versionが返すのはスタック領域のメモリなので、直接stringに変換できない
-            // そのため、一度IntPtrを介してからstringに変換する
-            var version = NativeMethods.quiche_version();
-            return Marshal.PtrToStringAnsi(version);
         }
 
         public static void DebugLog(Callback cb) {

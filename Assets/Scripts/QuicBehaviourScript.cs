@@ -23,7 +23,7 @@ public class QuicBehaviourScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Debug.Log(QuicheClient.GetVersion());
+        Debug.Log(QuicheVersion.GetVersion());
         QuicheClient.DebugLog((line, argp) => {
             Debug.Log(line);
         });
