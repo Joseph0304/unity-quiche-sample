@@ -30,7 +30,7 @@ namespace Quiche
             [DllImport("libquiche")]
             internal static extern int quiche_config_set_application_protos(
                 IntPtr config,
-                [MarshalAs(UnmanagedType.SafeArray)] byte[] protos,
+                byte[] protos,
                 ulong/*size_t*/ protos_len);
             [DllImport("libquiche")]
             internal static extern void quiche_config_set_idle_timeout(
