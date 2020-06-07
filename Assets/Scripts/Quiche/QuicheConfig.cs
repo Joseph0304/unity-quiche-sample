@@ -149,17 +149,20 @@ namespace Quiche
 
         public void SetInitialMaxStreamDataUni(ulong maxData)
         {
-            NativeMethods.quiche_config_set_initial_max_stream_data_uni(config, maxData);
+            NativeMethods.quiche_config_set_initial_max_stream_data_uni(
+                config, maxData);
         }
 
         public void SetInitialMaxStreamsBidi(ulong maxStreams)
         {
-            NativeMethods.quiche_config_set_initial_max_streams_bidi(config, maxStreams);
+            NativeMethods.quiche_config_set_initial_max_streams_bidi(
+                config, maxStreams);
         }
 
         public void SetInitialMaxStreamsUni(ulong maxStreams)
         {
-            NativeMethods.quiche_config_set_initial_max_streams_uni(config, maxStreams);
+            NativeMethods.quiche_config_set_initial_max_streams_uni(
+                config, maxStreams);
         }
 
         public void SetAckDelayExponent(ulong v)
