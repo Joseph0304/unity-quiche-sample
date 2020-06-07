@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Quiche
 {
@@ -257,7 +256,7 @@ namespace Quiche
         public const int MAX_DATAGRAM_SIZE = 1350;
         private const int LOCAL_CONN_ID_LEN = 16;
 
-        private Config Config { get; set; }
+        private QuicheConfig Config { get; set; }
         private IntPtr conn = IntPtr.Zero;
 
         private byte[] scid = Array.Empty<byte>();
@@ -265,7 +264,7 @@ namespace Quiche
         // Track whether Dispose has been called.
         private bool _disposed = false;
 
-        public QuicheClient(Config config)
+        public QuicheClient(QuicheConfig config)
         {
             Config = config;
         }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Quiche
 {
-    public class Config : IDisposable
+    public class QuicheConfig : IDisposable
     {
         private static class NativeMethods
         {
@@ -77,7 +77,7 @@ namespace Quiche
         // Track whether Dispose has been called.
         private bool _disposed = false;
 
-        public Config(uint version)
+        public QuicheConfig(uint version)
         {
             config = NativeMethods.quiche_config_new(version);
         }
@@ -153,7 +153,7 @@ namespace Quiche
             }
         }
 
-        ~Config()
+        ~QuicheConfig()
         {
             Dispose(false);
         }

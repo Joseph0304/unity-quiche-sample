@@ -29,7 +29,7 @@ public class QuicBehaviourScript : MonoBehaviour
         });
         client = new UdpClient();
 
-        var config = new Config(0xbabababa);
+        var config = new QuicheConfig(0xbabababa);
         byte[] protos = Encoding.ASCII.GetBytes("\x05hq-24\x05hq-23\x08http/0.9");
         config.SetApplicationProtos(protos);
         config.SetIdleTimeout(5000);
