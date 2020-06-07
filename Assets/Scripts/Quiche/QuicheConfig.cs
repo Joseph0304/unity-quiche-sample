@@ -31,7 +31,7 @@ namespace Quiche
             internal static extern int quiche_config_set_application_protos(
                 IntPtr config,
                 byte[] protos,
-                ulong/*size_t*/ protos_len);
+                ulong /*size_t*/ protos_len);
             [DllImport("libquiche")]
             internal static extern void quiche_config_set_idle_timeout(
                 IntPtr config, ulong v);
