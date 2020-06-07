@@ -3,8 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace Quiche
 {
-    public delegate void Callback(string line, IntPtr argp);
-
     public class QuicheClient : IDisposable
     {
         enum QuicError {
@@ -52,11 +50,6 @@ namespace Quiche
         };
         private static class NativeMethods
         {
-            /* debug logging */
-            [DllImport("libquiche")]
-            internal static extern int quiche_enable_debug_logging(
-                Callback cb, IntPtr argp);
-
             /* header */
             [DllImport("libquiche")]
             internal static extern int quiche_header_info(
@@ -236,11 +229,6 @@ namespace Quiche
             [DllImport("libquiche")]
             internal static extern void quiche_conn_free(IntPtr conn);
         }
-
-        public static void DebugLog(Callback cb) {
-            NativeMethods.quiche_enable_debug_logging(cb, IntPtr.Zero);
-        }
-
         public const int MAX_DATAGRAM_SIZE = 1350;
         private const int LOCAL_CONN_ID_LEN = 16;
 

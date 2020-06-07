@@ -24,7 +24,7 @@ public class QuicBehaviourScript : MonoBehaviour
     void Start()
     {
         Debug.Log(QuicheVersion.GetVersion());
-        QuicheClient.DebugLog((line, argp) => {
+        QuicheDebug.EnableDebugLogging((line, argp) => {
             Debug.Log(line);
         });
         client = new UdpClient();
