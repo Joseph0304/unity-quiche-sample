@@ -175,6 +175,9 @@ namespace Quiche
             return new QuicheConnection(conn);
         }
 
+        // The maximum length of a connection ID.
+        public const int QUICHE_MAX_CONN_ID_LEN = 20;
+
         public ulong TimeoutAsNanos
         {
             get { return NativeMethods.quiche_conn_timeout_as_nanos(Connection); }

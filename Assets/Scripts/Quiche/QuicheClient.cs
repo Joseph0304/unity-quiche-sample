@@ -93,6 +93,10 @@ namespace Quiche
                 IntPtr /* *mut u8 */ _out,
                 ulong /* size_t */ out_len);
         }
+
+        // The minimum length of Initial packets sent by a client.
+        public const int QUICHE_MIN_CLIENT_INITIAL_LEN = 1200;
+
         public const int MAX_DATAGRAM_SIZE = 1350;
         private const int LOCAL_CONN_ID_LEN = 16;
 
