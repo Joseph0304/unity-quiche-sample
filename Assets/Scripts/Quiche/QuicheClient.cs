@@ -65,23 +65,6 @@ namespace Quiche
                 IntPtr /* *mut u8 */ token,
                 IntPtr /* *mut size_t */ token_len);
 
-            /* accept */
-            [DllImport("libquiche")]
-            internal static extern IntPtr quiche_accept(
-                IntPtr /* *const u8 */ scid,
-                ulong /* size_t */ scid_len,
-                IntPtr /* *const u8 */ odcid,
-                ulong /* size_t */ odcid_len,
-                IntPtr config);
-
-            /* connect */
-            [DllImport("libquiche")]
-            internal static extern IntPtr quiche_connect(
-                string server_name,
-                [MarshalAs(UnmanagedType.SafeArray)] byte[] scid,
-                ulong /* size_t */ scid_len,
-                IntPtr config);
-
             /* negotiate version */
             [DllImport("libquiche")]
             internal static extern long /* ssize_t */ quiche_negotiate_version(
@@ -109,136 +92,27 @@ namespace Quiche
                 ulong /* size_t */ tolen_len,
                 IntPtr /* *mut u8 */ _out,
                 ulong /* size_t */ out_len);
-
-            /* connection */
-            [DllImport("libquiche")]
-            internal static extern IntPtr quiche_conn_new_with_tls(
-                IntPtr /* *const u8 */ scid,
-                ulong /* size_t */ scid_len,
-                IntPtr /* *const u8 */ odcid,
-                ulong /* size_t */ odcid_len,
-                IntPtr config,
-                IntPtr /* *mut c_void */ ssl,
-                bool is_server);
-
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_conn_recv(
-                IntPtr conn,
-                byte[] buf,
-                ulong /* size_t */ buf_len);
-
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_conn_send(
-                IntPtr conn,
-                byte[] buf,
-                ulong /* size_t */ buf_len);
-
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_conn_stream_recv(
-                IntPtr conn,
-                ulong stream_id,
-                IntPtr /* *mut u8 */ buf,
-                ulong /* size_t */ buf_len,
-                IntPtr /* &mut bool */ fin);
-
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_conn_stream_send(
-                IntPtr conn,
-                ulong stream_id,
-                IntPtr /* *const u8 */ buf,
-                ulong /* size_t */ buf_len,
-                bool fin);
-
-            [DllImport("libquiche")]
-            internal static extern int quiche_conn_stream_shutdown(
-                IntPtr conn,
-                ulong stream_id,
-                IntPtr /* Shutdown */ direction,
-                ulong err);
-
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_conn_stream_capacity(
-                IntPtr conn,
-                ulong stream_id);
-
-            [DllImport("libquiche")]
-            internal static extern bool quiche_conn_stream_finished(
-                IntPtr conn,
-                ulong stream_id);
-
-            [DllImport("libquiche")]
-            internal static extern IntPtr /* *mut StreamIter */ quiche_conn_readable(
-                IntPtr conn);
-
-            [DllImport("libquiche")]
-            internal static extern IntPtr /* *mut StreamIter */ quiche_conn_writable(
-                IntPtr conn);
-
-            [DllImport("libquiche")]
-            internal static extern int quiche_conn_stream_init_application_data(
-                IntPtr conn,
-                ulong stream_id,
-                IntPtr /* *mut c_void */ data);
-
-            [DllImport("libquiche")]
-            internal static extern IntPtr /* *mut c_void */ quiche_conn_stream_application_data(
-                IntPtr conn,
-                ulong stream_id);
-
-            [DllImport("libquiche")]
-            internal static extern int quiche_conn_close(
-                IntPtr conn,
-                bool app,
-                ulong err,
-                IntPtr /* *const u8 */ reason,
-                ulong /* size_t */ reason_len);
-
-            [DllImport("libquiche")]
-            internal static extern ulong quiche_conn_timeout_as_nanos(IntPtr conn);
-            [DllImport("libquiche")]
-            internal static extern ulong quiche_conn_timeout_as_millis(IntPtr conn);
-            [DllImport("libquiche")]
-            internal static extern void quiche_conn_on_timeout(IntPtr conn);
-
-            [DllImport("libquiche")]
-            internal static extern void quiche_conn_application_proto(
-                IntPtr conn,
-                IntPtr /* *const u8 */ _out,
-                ulong /* size_t */ out_len);
-
-            [DllImport("libquiche")]
-            internal static extern bool quiche_conn_is_established(IntPtr conn);
-            [DllImport("libquiche")]
-            internal static extern bool quiche_conn_is_in_early_data(IntPtr conn);
-            [DllImport("libquiche")]
-            internal static extern bool quiche_conn_is_closed(IntPtr conn);
-
-            [DllImport("libquiche")]
-            internal static extern bool quiche_stream_iter_next(
-                IntPtr iter,
-                IntPtr /* *mut u64 */ stream_id);
-
-            [DllImport("libquiche")]
-            internal static extern void quiche_stream_iter_free(IntPtr iter);
-
-            [DllImport("libquiche")]
-            internal static extern void quiche_conn_stats(
-                IntPtr conn,
-                IntPtr /* &mut Stats */ _out);
-
-            [DllImport("libquiche")]
-            internal static extern void quiche_conn_free(IntPtr conn);
         }
         public const int MAX_DATAGRAM_SIZE = 1350;
         private const int LOCAL_CONN_ID_LEN = 16;
 
         private QuicheConfig Config { get; set; }
-        private IntPtr conn = IntPtr.Zero;
+        private QuicheConnection Connection { get; set; }
 
         private byte[] scid = Array.Empty<byte>();
 
         // Track whether Dispose has been called.
         private bool _disposed = false;
+
+        public bool IsClosed
+        {
+            get { return Connection != null ? Connection.IsClosed : true; }
+        }
+
+        public bool IsEstablished
+        {
+            get { return Connection != null ? Connection.IsEstablished : false; }
+        }
 
         public QuicheClient(QuicheConfig config)
         {
@@ -251,30 +125,18 @@ namespace Quiche
             new System.Random().NextBytes(scid);
 
             // Create a QUIC connection and initiate handshake.
-            conn = NativeMethods.quiche_connect(
-                serverName, scid, (ulong)scid.Length, Config.Config);
+            Connection = QuicheConnection.Connect(
+                serverName, scid, Config);
         }
 
         public int Receive(byte[] buf)
         {
-            return (int)NativeMethods.quiche_conn_recv(
-                conn, buf, (ulong)buf.Length);
+            return Connection.Receive(buf);
         }
 
         public int Send(byte[] buf)
         {
-            return (int)NativeMethods.quiche_conn_send(
-                conn, buf, (ulong)MAX_DATAGRAM_SIZE);
-        }
-
-        public bool IsClosed
-        {
-            get {return NativeMethods.quiche_conn_is_closed(conn);}
-        }
-
-        public bool IsEstablished
-        {
-            get {return NativeMethods.quiche_conn_is_established(conn);}
+            return Connection.Send(buf);
         }
 
         public string HexDump
@@ -295,17 +157,16 @@ namespace Quiche
                 // dispose managed resource
                 if (disposing)
                 {
+                    if(Connection != null)
+                    {
+                        Connection.Dispose();
+                        Connection = null;
+                    }
                     if(Config != null)
                     {
                         Config.Dispose();
                         Config = null;
                     }
-                }
-
-                if(conn != IntPtr.Zero)
-                {
-                    NativeMethods.quiche_conn_free(conn);
-                    conn = IntPtr.Zero;
                 }
 
                 _disposed = true;
