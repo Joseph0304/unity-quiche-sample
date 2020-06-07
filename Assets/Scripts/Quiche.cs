@@ -1,6 +1,4 @@
 using System;
-using System.Net;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -198,7 +196,7 @@ public class Quiche : IDisposable
         [DllImport("libquiche")]
         internal static extern long /* ssize_t */ quiche_conn_recv(
             IntPtr conn,
-            [MarshalAs(UnmanagedType.SafeArray)] byte[] buf,
+            byte[] buf,
             ulong /* size_t */ buf_len);
 
         [DllImport("libquiche")]
@@ -316,25 +314,20 @@ public class Quiche : IDisposable
         NativeMethods.quiche_enable_debug_logging(cb, IntPtr.Zero);
     }
 
-    private const int MAX_DATAGRAM_SIZE = 1350;
+    public const int MAX_DATAGRAM_SIZE = 1350;
     private const int LOCAL_CONN_ID_LEN = 16;
 
     private IntPtr config;
     private IntPtr conn = IntPtr.Zero;
 
-    private UdpClient socket;
+    private byte[] scid = Array.Empty<byte>();
+
 
     // Track whether Dispose has been called.
     private bool _disposed = false;
 
-    private IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
-
-    private byte[] buff = new byte[buff_len];
-    private const int buff_len = MAX_DATAGRAM_SIZE;
-
     public Quiche()
     {
-        socket = new UdpClient();
         config = NativeMethods.quiche_config_new(0xbabababa);
         byte[] protos = Encoding.ASCII.GetBytes("\x05hq-24\x05hq-23\x08http/0.9");
         NativeMethods.quiche_config_set_application_protos(
@@ -350,105 +343,41 @@ public class Quiche : IDisposable
         NativeMethods.quiche_config_verify_peer(config, false);
     }
 
-    public void Connect(string url)
+    public void Connect(string serverName)
     {
-        var uri = new Uri(url);
-        var host = uri.Host;
-        var port = uri.Port;
-        socket.Connect($"{host}", port);
-
-        var scid = new byte[LOCAL_CONN_ID_LEN];
+        scid = new byte[LOCAL_CONN_ID_LEN];
         new System.Random().NextBytes(scid);
 
         // Create a QUIC connection and initiate handshake.
         conn = NativeMethods.quiche_connect(
-            uri.Authority, scid, (ulong)scid.Length, config);
-
-        Debug.Log(
-            $"connecting to {uri.Authority} from {socket.Client.LocalEndPoint} with scid {string.Join(",",scid)}");
-        // initial send
-        int write = (int)NativeMethods.quiche_conn_send(
-            conn, buff, (ulong)buff_len);
-        socket.Send(buff, write);
-        Debug.Log($"written {write}");
+            serverName, scid, (ulong)scid.Length, config);
     }
 
-    private IAsyncResult receiveResult = null;
-    private void Receive()
+    public int Receive(byte[] buf)
     {
-        if(receiveResult != null)
-        {
-            if(receiveResult.IsCompleted)
-            {
-                receiveResult = null;
-                return;
-            }
-            return;
-        }
-        receiveResult = socket.BeginReceive((res) => {
-            var recvBytes = socket.EndReceive(res, ref RemoteIpEndPoint);
-            var read = NativeMethods.quiche_conn_recv(
-                conn, recvBytes, (ulong)recvBytes.Length);
-            if(read == -1)
-            {
-                Debug.Log("done reading");
-                return;
-            }
-            if(read < 0)
-            {
-                Debug.LogError($"recv failed {read}");
-                throw new Exception();
-            }
-        }, null);
+        return (int)NativeMethods.quiche_conn_recv(
+            conn, buf, (ulong)buf.Length);
     }
 
-    private void Send()
+    public int Send(byte[] buf)
     {
-        int write = (int)NativeMethods.quiche_conn_send(
-            conn, buff, (ulong)buff_len);
-        if(write == -1)
-        {
-            write = buff_len;
-            Debug.Log("done writing");
-            return;
-        }
-        else if(write < 0)
-        {
-            Debug.LogError($"send failed {write}");
-            throw new Exception();
-        }
-        socket.Send(buff, write);
+        return (int)NativeMethods.quiche_conn_send(
+            conn, buf, (ulong)MAX_DATAGRAM_SIZE);
     }
 
-    private bool IsClosed
+    public bool IsClosed
     {
         get {return NativeMethods.quiche_conn_is_closed(conn);}
     }
 
-    private bool IsEstablished
+    public bool IsEstablished
     {
         get {return NativeMethods.quiche_conn_is_established(conn);}
     }
 
-    public void Poll()
+    public string HexDump
     {
-        Receive();
-        if(IsClosed)
-        {
-            Debug.Log("connection closed");
-            return;
-        }
-        if(IsEstablished)
-        {
-            // TODO
-            return;
-        }
-        Send();
-        if(IsClosed)
-        {
-            Debug.Log("connection closed");
-            return;
-        }
+        get {return string.Join(",", scid);}
     }
 
     public void Dispose()
@@ -461,10 +390,12 @@ public class Quiche : IDisposable
     {
         if (!_disposed)
         {
+            /*
+            // dispose managed resource
             if (disposing)
             {
-                socket.Dispose();
             }
+            */
 
             if(conn != IntPtr.Zero)
             {
