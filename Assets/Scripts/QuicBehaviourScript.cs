@@ -85,7 +85,9 @@ public class QuicBehaviourScript : MonoBehaviour
                 }
                 if(read < 0)
                 {
-                    Debug.LogError($"recv failed {read}");
+                    QuicheError err = (QuicheError)Enum
+                        .ToObject(typeof(QuicheError), read);
+                    Debug.LogError($"recv failed {err}");
                     throw new Exception();
                 }
             }, null);
@@ -106,7 +108,9 @@ public class QuicBehaviourScript : MonoBehaviour
         }
         if(write < 0)
         {
-            Debug.LogError($"send failed {write}");
+            QuicheError err = (QuicheError)Enum
+                .ToObject(typeof(QuicheError), write);
+            Debug.LogError($"send failed {err}");
             throw new Exception();
         }
         client.Send(buf, write);
