@@ -7,21 +7,6 @@ namespace Quiche
     {
         private static class NativeMethods
         {
-            /* header */
-            [DllImport("libquiche")]
-            internal static extern int quiche_header_info(
-                IntPtr /* *mut u8 */ buf,
-                ulong /* size_t */ buf_len,
-                ulong /* size_t */ dcil,
-                IntPtr /* *mut u32 */ version,
-                IntPtr /* *mut u8 */ ty,
-                IntPtr /* *mut u8 */ scid,
-                IntPtr /* *mut size_t */ scid_len,
-                IntPtr /* *mut u8 */ dcid,
-                IntPtr /* *mut size_t */ dcid_len,
-                IntPtr /* *mut u8 */ token,
-                IntPtr /* *mut size_t */ token_len);
-
             /* negotiate version */
             [DllImport("libquiche")]
             internal static extern long /* ssize_t */ quiche_negotiate_version(
@@ -55,7 +40,7 @@ namespace Quiche
         public const int QUICHE_MIN_CLIENT_INITIAL_LEN = 1200;
 
         public const int MAX_DATAGRAM_SIZE = 1350;
-        private const int LOCAL_CONN_ID_LEN = 16;
+        public const int LOCAL_CONN_ID_LEN = 16;
 
         private QuicheConfig Config { get; set; }
         private QuicheConnection Connection { get; set; }
