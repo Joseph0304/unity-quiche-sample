@@ -69,115 +69,112 @@ namespace Quiche
             internal static extern void quiche_config_free(IntPtr config);
         }
 
-        private IntPtr config;
-
-        public IntPtr RawConfig { get {return config;} }
-
+        public IntPtr Config { get; private set; }
 
         // Track whether Dispose has been called.
         private bool _disposed = false;
 
         public QuicheConfig(uint version)
         {
-            config = NativeMethods.quiche_config_new(version);
+            Config = NativeMethods.quiche_config_new(version);
         }
 
         public int LoadCertChainFromPemFile(string path)
         {
             return NativeMethods.quiche_config_load_cert_chain_from_pem_file(
-                config, path);
+                Config, path);
         }
 
         public int LoadPrivKeyFromPemFile(string path)
         {
             return NativeMethods.quiche_config_load_priv_key_from_pem_file(
-                config, path);
+                Config, path);
         }
 
         public void VerifyPeer(bool v)
         {
-            NativeMethods.quiche_config_verify_peer(config, v);
+            NativeMethods.quiche_config_verify_peer(Config, v);
         }
 
         public void Grease(bool v)
         {
-            NativeMethods.quiche_config_grease(config, v);
+            NativeMethods.quiche_config_grease(Config, v);
         }
 
         public void LogKeys()
         {
-            NativeMethods.quiche_config_log_keys(config);
+            NativeMethods.quiche_config_log_keys(Config);
         }
 
         public void EnableEarlyData()
         {
-            NativeMethods.quiche_config_enable_early_data(config);
+            NativeMethods.quiche_config_enable_early_data(Config);
         }
 
         public void SetApplicationProtos(byte[] protos)
         {
             NativeMethods.quiche_config_set_application_protos(
-                config, protos, (ulong)protos.Length);
+                Config, protos, (ulong)protos.Length);
         }
 
         public void SetIdleTimeout(ulong timeout)
         {
-            NativeMethods.quiche_config_set_idle_timeout(config, timeout);
+            NativeMethods.quiche_config_set_idle_timeout(Config, timeout);
         }
 
         public void SetMaxPacketSize(ulong maxPacketSize)
         {
-            NativeMethods.quiche_config_set_max_packet_size(config, maxPacketSize);
+            NativeMethods.quiche_config_set_max_packet_size(Config, maxPacketSize);
         }
 
         public void SetInitialMaxData(ulong maxData)
         {
-            NativeMethods.quiche_config_set_initial_max_data(config, maxData);
+            NativeMethods.quiche_config_set_initial_max_data(Config, maxData);
         }
 
         public void SetInitialMaxStreamDataBidiLocal(ulong maxData)
         {
             NativeMethods.quiche_config_set_initial_max_stream_data_bidi_local(
-                config, maxData);
+                Config, maxData);
         }
 
         public void SetInitialMaxStreamDataBidiRemote(ulong maxData)
         {
             NativeMethods.quiche_config_set_initial_max_stream_data_bidi_remote(
-                config, maxData);
+                Config, maxData);
         }
 
         public void SetInitialMaxStreamDataUni(ulong maxData)
         {
             NativeMethods.quiche_config_set_initial_max_stream_data_uni(
-                config, maxData);
+                Config, maxData);
         }
 
         public void SetInitialMaxStreamsBidi(ulong maxStreams)
         {
             NativeMethods.quiche_config_set_initial_max_streams_bidi(
-                config, maxStreams);
+                Config, maxStreams);
         }
 
         public void SetInitialMaxStreamsUni(ulong maxStreams)
         {
             NativeMethods.quiche_config_set_initial_max_streams_uni(
-                config, maxStreams);
+                Config, maxStreams);
         }
 
         public void SetAckDelayExponent(ulong v)
         {
-            NativeMethods.quiche_config_set_ack_delay_exponent(config, v);
+            NativeMethods.quiche_config_set_ack_delay_exponent(Config, v);
         }
 
         public void SetMaxAckDelay(ulong v)
         {
-            NativeMethods.quiche_config_set_max_ack_delay(config, v);
+            NativeMethods.quiche_config_set_max_ack_delay(Config, v);
         }
 
         public void SetDisableActiveMigration(bool v)
         {
-            NativeMethods.quiche_config_set_disable_active_migration(config, v);
+            NativeMethods.quiche_config_set_disable_active_migration(Config, v);
         }
 
         public void Dispose()
@@ -190,10 +187,10 @@ namespace Quiche
         {
             if (!_disposed)
             {
-                if(config != IntPtr.Zero)
+                if(Config != IntPtr.Zero)
                 {
-                    NativeMethods.quiche_config_free(config);
-                    config = IntPtr.Zero;
+                    NativeMethods.quiche_config_free(Config);
+                    Config = IntPtr.Zero;
                 }
 
                 _disposed = true;

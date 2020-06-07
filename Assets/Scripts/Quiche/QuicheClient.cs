@@ -276,7 +276,7 @@ namespace Quiche
 
             // Create a QUIC connection and initiate handshake.
             conn = NativeMethods.quiche_connect(
-                serverName, scid, (ulong)scid.Length, Config.RawConfig);
+                serverName, scid, (ulong)scid.Length, Config.Config);
         }
 
         public int Receive(byte[] buf)
