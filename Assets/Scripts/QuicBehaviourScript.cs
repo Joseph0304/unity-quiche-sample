@@ -78,7 +78,7 @@ public class QuicBehaviourScript : MonoBehaviour
             receiveResult = client.BeginReceive((res) => {
                 var recvBytes = client.EndReceive(res, ref RemoteIpEndPoint);
                 var read = quiche.Receive(recvBytes);
-                if(read == -1)
+                if(read == (int)QuicheError.QUICHE_ERR_DONE)
                 {
                     Debug.Log("done reading");
                     return;
@@ -100,7 +100,7 @@ public class QuicBehaviourScript : MonoBehaviour
             return;
         }
         var write = quiche.Send(buf);
-        if(write == -1)
+        if(write == (int)QuicheError.QUICHE_ERR_DONE)
         {
             return;
         }
