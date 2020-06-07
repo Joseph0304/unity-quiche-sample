@@ -11,7 +11,7 @@ namespace Quiche
             [DllImport("libquiche")]
             internal static extern bool quiche_stream_iter_next(
                 IntPtr iter,
-                ref int /* *mut u64 */ stream_id);
+                ref ulong /* *mut u64 */ stream_id);
 
             [DllImport("libquiche")]
             internal static extern void quiche_stream_iter_free(IntPtr iter);
@@ -28,7 +28,7 @@ namespace Quiche
 
         public IEnumerator GetEnumerator()
         {
-            int streamId = 0;
+            ulong streamId = 0;
             while(NativeMethods.quiche_stream_iter_next(Iterator, ref streamId))
             {
                 yield return streamId;
