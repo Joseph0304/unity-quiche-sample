@@ -9,7 +9,7 @@ using UnityEngine;
 
 using Quiche;
 
-public class QuicBehaviourScript : MonoBehaviour
+public class QuicClientBehaviourScript : MonoBehaviour
 {
     private const ulong HTTP_REQ_STREAM_ID = 4;
     private UdpClient client = null;
