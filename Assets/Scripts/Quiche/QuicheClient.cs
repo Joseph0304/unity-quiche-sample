@@ -5,38 +5,6 @@ namespace Quiche
 {
     public class QuicheClient : IDisposable
     {
-        private static class NativeMethods
-        {
-            /* negotiate version */
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_negotiate_version(
-                IntPtr /* *const u8 */ scid,
-                ulong /* size_t */ scid_len,
-                IntPtr /* *const u8 */ dcid,
-                ulong /* size_t */ dcid_len,
-                IntPtr /* *mut u8 */ _out,
-                ulong /* size_t */ out_len);
-
-            /* version supported */
-            [DllImport("libquiche")]
-            internal static extern bool quiche_version_is_supported(
-                uint version);
-
-            /* retry */
-            [DllImport("libquiche")]
-            internal static extern long /* ssize_t */ quiche_retry(
-                IntPtr /* *const u8 */ scid,
-                ulong /* size_t */ scid_len,
-                IntPtr /* *const u8 */ dcid,
-                ulong /* size_t */ dcid_len,
-                IntPtr /* *const u8 */ new_scid,
-                ulong /* size_t */ new_scid_len,
-                IntPtr /* *const u8 */ token,
-                ulong /* size_t */ tolen_len,
-                IntPtr /* *mut u8 */ _out,
-                ulong /* size_t */ out_len);
-        }
-
         // The minimum length of Initial packets sent by a client.
         public const int QUICHE_MIN_CLIENT_INITIAL_LEN = 1200;
 
