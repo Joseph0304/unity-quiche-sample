@@ -19,7 +19,8 @@ namespace Quiche
 
             /* version supported */
             [DllImport("libquiche")]
-            internal static extern bool quiche_negotiate_version(uint version);
+            internal static extern bool quiche_version_is_supported(
+                uint version);
 
             /* retry */
             [DllImport("libquiche")]
