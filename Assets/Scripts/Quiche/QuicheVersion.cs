@@ -13,7 +13,7 @@ namespace Quiche
         }
 
         // The current QUIC wire version.
-        public const ulong QUICHE_PROTOCOL_VERSION = 0xff000018;
+        public const uint QUICHE_PROTOCOL_VERSION = 0xff000018;
 
         public static string GetVersion()
         {

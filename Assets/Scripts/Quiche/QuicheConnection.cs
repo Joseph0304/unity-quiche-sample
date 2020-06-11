@@ -144,7 +144,7 @@ namespace Quiche
             byte[] scid, byte[] odcid, QuicheConfig config)
         {
             var conn = NativeMethods.quiche_accept(
-                scid, (ulong)scid.Length, odcid, (ulong)odcid.Length,config.Config);
+                scid, (ulong)scid.Length, odcid, (ulong)odcid.Length, config.Config);
             return new QuicheConnection(conn);
         }
 
