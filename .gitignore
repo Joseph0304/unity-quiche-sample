@@ -60,3 +60,4 @@ crashlytics-build.properties
 
 # Addional ignore files
 [Aa]ssets/Plugins/**/libquiche.*
+[Aa]ssets/Server/cert.*
