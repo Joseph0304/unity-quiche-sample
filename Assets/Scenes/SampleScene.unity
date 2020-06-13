@@ -325,6 +325,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fcc42b1572b94002a46a347b11cd3ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  urlString: https://127.0.0.1:4433/index.html
 --- !u!4 &1658914924
 Transform:
   m_ObjectHideFlags: 0
@@ -368,6 +369,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f54f9110ab2d43c9a6e83a94fbf1bd5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  localIpString: 127.0.0.1
+  localPort: 4433
   earlyData: 1
   noRetry: 0
 --- !u!4 &1686750588
