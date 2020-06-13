@@ -11,9 +11,12 @@ using Quiche;
 
 public class QuicClientBehaviourScript : MonoBehaviour
 {
+    public string urlString = "https://127.0.0.1:4433/index.html";
+
     private const ulong HTTP_REQ_STREAM_ID = 4;
     private UdpClient client = null;
     private QuicheClient quiche = null;
+    private QuicheConnection conn = null;
 
     private IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
@@ -29,6 +32,7 @@ public class QuicClientBehaviourScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        uri = new Uri(urlString);
         Debug.Log(QuicheVersion.GetVersion());
         QuicheDebug.EnableDebugLogging((line, argp) => {
             Debug.Log(line);
@@ -48,7 +52,7 @@ public class QuicClientBehaviourScript : MonoBehaviour
         config.SetDisableActiveMigration(true);
         config.VerifyPeer(false);
         quiche = new QuicheClient(config);
-        Connect("https://127.0.0.1:4433/index.html");
+        Connect(urlString);
     }
 
     // Update is called once per frame
@@ -59,31 +63,35 @@ public class QuicClientBehaviourScript : MonoBehaviour
 
     private void Connect(string url)
     {
-        uri = new Uri(url);
         var host = uri.Host;
         var port = uri.Port;
         client.Connect($"{host}", port);
-        quiche.Connect(uri.Authority);
+        conn = quiche.Connect(uri.Authority);
         Debug.Log(
             $"connecting to {uri.Authority} from {client.Client.LocalEndPoint} "
             + $"with scid {quiche.HexDump}");
         // initial send
         buf = new byte[QuicheClient.MAX_DATAGRAM_SIZE];
-        int write = quiche.Send(buf);
+        int write = conn.Send(buf);
         client.Send(buf, write);
     }
 
     private void Poll()
     {
-        if(quiche.IsClosed)
+        if(conn == null)
         {
             return;
         }
+        if(conn.IsClosed)
+        {
+            return;
+        }
+        conn.OnTimeout();
         if(receiveResult == null)
         {
             receiveResult = client.BeginReceive((res) => {
                 var recvBytes = client.EndReceive(res, ref RemoteIpEndPoint);
-                var read = quiche.Receive(recvBytes);
+                var read = conn.Receive(recvBytes);
                 if(read == (int)QuicheError.QUICHE_ERR_DONE)
                 {
                     Debug.Log("done reading");
@@ -102,13 +110,13 @@ public class QuicClientBehaviourScript : MonoBehaviour
         {
             receiveResult = null;
         }
-        if(quiche.IsEstablished)
+        if(conn.IsEstablished)
         {
             if(!req_sent)
             {
                 Debug.Log($"sending HTTP request for {uri.PathAndQuery}");
                 var req = Encoding.ASCII.GetBytes($"GET {uri.PathAndQuery}\r\n");
-                var streamWrite = quiche.StreamSend(HTTP_REQ_STREAM_ID, req, true);
+                var streamWrite = conn.StreamSend(HTTP_REQ_STREAM_ID, req, true);
                 if(streamWrite < 0)
                 {
                     QuicheError err = (QuicheError)Enum
@@ -119,10 +127,10 @@ public class QuicClientBehaviourScript : MonoBehaviour
                 req_sent = true;
             }
 
-            foreach(ulong streamId in quiche.Readable())
+            foreach(ulong streamId in conn.Readable())
             {
                 bool fin = false;
-                var readStream = quiche.StreamReceive(
+                var readStream = conn.StreamReceive(
                     streamId, streamRecv, ref fin);
                 if(readStream < 0)
                 {
@@ -134,7 +142,7 @@ public class QuicClientBehaviourScript : MonoBehaviour
                 if(fin)
                 {
                     var reason = Encoding.ASCII.GetBytes("kthxbye");
-                    int closeError = quiche.Close(reason);
+                    int closeError = conn.Close(true, 0, reason);
                     if(closeError < 0)
                     {
                         QuicheError err = (QuicheError)Enum
@@ -145,7 +153,7 @@ public class QuicClientBehaviourScript : MonoBehaviour
                 }
             }
         }
-        var write = quiche.Send(buf);
+        var write = conn.Send(buf);
         if(write == (int)QuicheError.QUICHE_ERR_DONE)
         {
             return;
@@ -162,6 +170,11 @@ public class QuicClientBehaviourScript : MonoBehaviour
 
     void OnDestroy()
     {
+        if(conn != null)
+        {
+            conn.Dispose();
+            conn = null;
+        }
         if(quiche != null)
         {
             quiche.Dispose();
