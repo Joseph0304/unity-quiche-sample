@@ -57,16 +57,30 @@ public class QuicServerBehaviourScript : MonoBehaviour
 
     private class Client
     {
+        public IPEndPoint RemoteIpEndPoint { get; }
         public QuicheConnection Connection { get; }
         public Dictionary<ulong, PartialResponse> PartialResponses { get; }
 
-        public Client(QuicheConnection conn)
+        public Client(QuicheConnection conn, IPEndPoint remoteIpEndPoint)
         {
+            RemoteIpEndPoint = remoteIpEndPoint;
             Connection = conn;
             PartialResponses = new Dictionary<ulong, PartialResponse>();
         }
     }
 
+    private class ClientState
+    {
+        public byte[] ReceiveBytes { get; set; }
+        public IPEndPoint remoteIpEndPoint;
+        public ClientState()
+        {
+            remoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
+        }
+    }
+
+    public string localIpString = "127.0.0.1";
+    public int localPort = 4433;
     public bool earlyData = false;
     public bool noRetry = true;
 
@@ -74,14 +88,12 @@ public class QuicServerBehaviourScript : MonoBehaviour
     private QuicheListener quiche = null;
 
     private IAsyncResult receiveResult = null;
-    private IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
     private Dictionary<string, Client> clients = new Dictionary<string, Client>();
 
     private byte[] negotiateBuf = new byte[65535];
     private byte[] streamRecv = new byte[65535];
     private byte[] sendBuf = new byte[QuicheClient.MAX_DATAGRAM_SIZE];
-    private byte[] recvBytes = null;
 
     // Start is called before the first frame update
     void Start()
@@ -90,9 +102,7 @@ public class QuicServerBehaviourScript : MonoBehaviour
         QuicheDebug.EnableDebugLogging((line, argp) => {
             Debug.Log(line);
         });
-        var localIpString = "127.0.0.1";
         var localAddress = IPAddress.Parse(localIpString);
-        var localPort = 4433;
         var localEP = new IPEndPoint(localAddress, localPort);
         udpClient = new UdpClient(localEP);
         var config = new QuicheConfig(QuicheVersion.QUICHE_PROTOCOL_VERSION);
@@ -125,13 +135,13 @@ public class QuicServerBehaviourScript : MonoBehaviour
         if(receiveResult == null)
         {
             receiveResult = udpClient.BeginReceive((res) => {
-                recvBytes = udpClient.EndReceive(res, ref RemoteIpEndPoint);
-            }, null);
+                var state = (ClientState)res.AsyncState;
+                state.ReceiveBytes = udpClient.EndReceive(res, ref state.remoteIpEndPoint);
+            }, new ClientState());
         }
         if(receiveResult.IsCompleted)
         {
-            Poll(recvBytes);
-            recvBytes = null;
+            Poll((ClientState)receiveResult.AsyncState);
             receiveResult = null;
         }
         foreach(var key in clients.Keys)
@@ -152,7 +162,7 @@ public class QuicServerBehaviourScript : MonoBehaviour
                 continue;
             }
             var buf = sendBuf.Take(written).ToArray();
-            udpClient.Send(buf, written, RemoteIpEndPoint);
+            udpClient.Send(buf, written, client.RemoteIpEndPoint);
             Debug.Log($"sent {written} bytes");
         }
         foreach(var key in clients.Keys
@@ -221,8 +231,10 @@ public class QuicServerBehaviourScript : MonoBehaviour
             _out, (ulong)_out.Length);
     }
 
-    private void Poll(byte[] recvBytes)
+    private void Poll(ClientState state)
     {
+        var recvBytes = state.ReceiveBytes;
+        var remoteIpEndPoint = state.remoteIpEndPoint;
         QuicheHeaderInfo header;
         try{
             header = QuicheHeaderInfo.Construct(recvBytes);
@@ -256,7 +268,7 @@ public class QuicServerBehaviourScript : MonoBehaviour
                 var length = (int)NegotiateVersion(
                     header.Scid, header.Dcid, negotiateBuf);
                 var sendBuf = negotiateBuf.Take(length).ToArray();
-                udpClient.Send(sendBuf, length, RemoteIpEndPoint);
+                udpClient.Send(sendBuf, length, remoteIpEndPoint);
                 return;
             }
             var scid = new byte[QuicheClient.LOCAL_CONN_ID_LEN];
@@ -270,14 +282,14 @@ public class QuicServerBehaviourScript : MonoBehaviour
 
                     Debug.Log($"Retry: scid={HexDump(header.Scid)} new_scid={HexDump(scid)}");
 
-                    var new_token = MintToken(header, RemoteIpEndPoint);
+                    var new_token = MintToken(header, remoteIpEndPoint);
                     var _out = new byte[65535];
                     var written = (int)Retry(header.Scid, header.Dcid, scid, new_token, _out);
                     udpClient.Send(
-                        _out.Take(written).ToArray(), written, RemoteIpEndPoint);
+                        _out.Take(written).ToArray(), written, remoteIpEndPoint);
                     return;
                 }
-                odcid = ValidateToken(header.Token, RemoteIpEndPoint);
+                odcid = ValidateToken(header.Token, remoteIpEndPoint);
                 if(odcid == null)
                 {
                     Debug.LogError("Invalid address validation token");
@@ -291,7 +303,7 @@ public class QuicServerBehaviourScript : MonoBehaviour
             }
             scid = header.Dcid;
             var conn = quiche.Accept(scid, odcid);
-            var _client = new Client(conn);
+            var _client = new Client(conn, remoteIpEndPoint);
             clients.Add(HexDump(scid), _client);
             client = _client;
         }
