@@ -180,73 +180,74 @@ namespace Quiche
 
         public ulong TimeoutAsNanos
         {
-            get { return NativeMethods.quiche_conn_timeout_as_nanos(Connection); }
+            get { return NativeMethods.quiche_conn_timeout_as_nanos(conn); }
         }
 
         public ulong TimeoutAsMillis
         {
-            get { return NativeMethods.quiche_conn_timeout_as_millis(Connection); }
+            get { return NativeMethods.quiche_conn_timeout_as_millis(conn); }
         }
 
         public bool IsEstablished
         {
-            get { return NativeMethods.quiche_conn_is_established(Connection); }
+            get { return NativeMethods.quiche_conn_is_established(conn); }
         }
 
         public bool IsInEarlyData
         {
-            get { return NativeMethods.quiche_conn_is_in_early_data(Connection); }
+            get { return NativeMethods.quiche_conn_is_in_early_data(conn); }
         }
 
         public bool IsClosed
         {
-            get { return NativeMethods.quiche_conn_is_closed(Connection); }
+            get { return NativeMethods.quiche_conn_is_closed(conn); }
         }
 
-        private IntPtr Connection { get; set; }
+        public IntPtr Connection { get { return conn; } }
         private IntPtr ReadableIter { get; set; }
         private IntPtr WritableIter { get; set; }
+        private IntPtr conn;
         private bool _disposed = false;
 
         private QuicheConnection(IntPtr connection)
         {
-            Connection = connection;
+            conn = connection;
             ReadableIter = IntPtr.Zero;
             WritableIter = IntPtr.Zero;
         }
 
         public int Receive(byte[] buf)
         {
-            return (int)NativeMethods.quiche_conn_recv(Connection, buf, (ulong)buf.Length);
+            return (int)NativeMethods.quiche_conn_recv(conn, buf, (ulong)buf.Length);
         }
 
         public int Send(byte[] buf)
         {
-            return (int)NativeMethods.quiche_conn_send(Connection, buf, (ulong)buf.Length);
+            return (int)NativeMethods.quiche_conn_send(conn, buf, (ulong)buf.Length);
         }
 
         public int StreamReceive(ulong streamId, byte[] _out, ref bool fin)
         {
             return (int)NativeMethods.quiche_conn_stream_recv(
-                Connection, streamId, _out, (ulong)_out.Length, ref fin);
+                conn, streamId, _out, (ulong)_out.Length, ref fin);
         }
 
         public int StreamSend(ulong streamId, byte[] buf, bool fin)
         {
             return (int)NativeMethods.quiche_conn_stream_send(
-                Connection, streamId, buf, (ulong)buf.Length, fin);
+                conn, streamId, buf, (ulong)buf.Length, fin);
         }
 
         public int StreamShutdown(ulong streamId, Shutdown direction, ulong err)
         {
             return NativeMethods.quiche_conn_stream_shutdown(
-                Connection, streamId, (int)direction, err);
+                conn, streamId, (int)direction, err);
         }
 
         public long StreamCapacity(ulong streamId)
         {
             return NativeMethods.quiche_conn_stream_capacity(
-                Connection, streamId);
+                conn, streamId);
         }
 
         public bool StreamFinished(ulong streamId)
@@ -258,13 +259,13 @@ namespace Quiche
         public QuicheStreamIterator Readable()
         {
             return new QuicheStreamIterator(
-                NativeMethods.quiche_conn_readable(Connection));
+                NativeMethods.quiche_conn_readable(conn));
         }
 
         public QuicheStreamIterator Writable()
         {
             return new QuicheStreamIterator(
-                NativeMethods.quiche_conn_writable(Connection));
+                NativeMethods.quiche_conn_writable(conn));
         }
 
         public int StreamInitApplicationData(ulong streamId, byte[] data)
@@ -272,7 +273,7 @@ namespace Quiche
             var ptr = Marshal.AllocCoTaskMem(data.Length);
             Marshal.Copy(data, 0, ptr, data.Length);
             var err = NativeMethods.quiche_conn_stream_init_application_data(
-               Connection, streamId, ptr);
+               conn, streamId, ptr);
             Marshal.FreeCoTaskMem(ptr);
             return err;
         }
@@ -280,24 +281,24 @@ namespace Quiche
         public IntPtr StreamApplicationData(ulong streamId)
         {
             return NativeMethods.quiche_conn_stream_application_data(
-                Connection, streamId);
+                conn, streamId);
         }
 
         public int Close(bool app, ulong err, byte[] reason)
         {
             return NativeMethods.quiche_conn_close(
-                Connection, app, err, reason, (ulong)reason.Length);
+                conn, app, err, reason, (ulong)reason.Length);
         }
 
         public void OnTimeout()
         {
-            NativeMethods.quiche_conn_on_timeout(Connection);
+            NativeMethods.quiche_conn_on_timeout(conn);
         }
 
         public void ApplicationProto(byte[] _out)
         {
             NativeMethods.quiche_conn_application_proto(
-                Connection, _out, (ulong)_out.Length);
+                conn, _out, (ulong)_out.Length);
         }
 
         public void Dispose()
@@ -310,10 +311,10 @@ namespace Quiche
         {
             if (!_disposed)
             {
-                if(Connection != IntPtr.Zero)
+                if(conn != IntPtr.Zero)
                 {
-                    NativeMethods.quiche_conn_free(Connection);
-                    Connection = IntPtr.Zero;
+                    NativeMethods.quiche_conn_free(conn);
+                    conn = IntPtr.Zero;
                 }
                 _disposed = true;
             }

@@ -1,6 +1,7 @@
 namespace Quiche
 {
-    enum QuicheError {
+    enum QuicheError
+    {
         // There is no more work to do.
         QUICHE_ERR_DONE = -1,
 
@@ -42,5 +43,5 @@ namespace Quiche
 
         // The received data exceeds the stream's final size.
         QUICHE_ERR_FINAL_SIZE = -13,
-    };
+    }
 }

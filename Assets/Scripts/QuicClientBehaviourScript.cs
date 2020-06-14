@@ -52,7 +52,7 @@ public class QuicClientBehaviourScript : MonoBehaviour
         config.SetDisableActiveMigration(true);
         config.VerifyPeer(false);
         quiche = new QuicheClient(config);
-        Connect(urlString);
+        Connect();
     }
 
     // Update is called once per frame
@@ -61,7 +61,7 @@ public class QuicClientBehaviourScript : MonoBehaviour
         Poll();
     }
 
-    private void Connect(string url)
+    private void Connect()
     {
         var host = uri.Host;
         var port = uri.Port;
